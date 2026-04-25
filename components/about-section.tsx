@@ -8,7 +8,7 @@ import {
   useScroll,
   useTransform,
 } from "framer-motion";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Brain, Code2, Database, Palette } from "lucide-react";
 import { FaJava } from "react-icons/fa";
 import type { IconType } from "react-icons";
@@ -225,6 +225,11 @@ const techCategories: TechCategory[] = [
 
 export function AboutSection() {
   const ref = useRef<HTMLElement>(null);
+  const techStackRef = useRef<HTMLDivElement>(null);
+  const hasPausedAtTechBottom = useRef(false);
+  const stopScrollY = useRef<number | null>(null);
+  const lastScrollY = useRef(0);
+  const downScrollLockUntil = useRef(0);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [activeCategory, setActiveCategory] = useState("frontend");
   const { scrollYProgress } = useScroll({
@@ -247,10 +252,78 @@ export function AboutSection() {
       mass: 0.45,
     },
   );
-
   const currentSkills =
     techCategories.find((category) => category.id === activeCategory)?.skills ||
     [];
+
+  useEffect(() => {
+    const computeStopY = () => {
+      const rect = techStackRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      const absoluteBottom = window.scrollY + rect.bottom;
+      const triggerLine = window.innerHeight * 0.88;
+      return Math.max(0, Math.round(absoluteBottom - triggerLine));
+    };
+
+    const refreshStopY = () => {
+      stopScrollY.current = computeStopY();
+    };
+
+    const releasePauseIfScrolledUp = () => {
+      const target = stopScrollY.current;
+      if (target === null) return;
+      if (window.scrollY < target - 120) {
+        hasPausedAtTechBottom.current = false;
+      }
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      const target = stopScrollY.current;
+      if (target === null) return;
+      const now = performance.now();
+
+      // Upward scroll should never be blocked.
+      if (event.deltaY <= 0) {
+        releasePauseIfScrolledUp();
+        return;
+      }
+
+      // While lock is active, force position to stay on the stop line.
+      if (now < downScrollLockUntil.current) {
+        event.preventDefault();
+        return;
+      }
+
+      const projectedY = window.scrollY + event.deltaY;
+      const crossingStopPoint =
+        window.scrollY < target && projectedY >= target;
+
+      if (crossingStopPoint && !hasPausedAtTechBottom.current) {
+        event.preventDefault();
+        window.scrollTo({ top: target, behavior: "auto" });
+        hasPausedAtTechBottom.current = true;
+        downScrollLockUntil.current = now + 460;
+      }
+    };
+
+    const handleScroll = () => {
+      releasePauseIfScrolledUp();
+      lastScrollY.current = window.scrollY;
+    };
+
+    refreshStopY();
+    lastScrollY.current = window.scrollY;
+
+    window.addEventListener("resize", refreshStopY, { passive: true });
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", refreshStopY);
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
     <section
@@ -368,86 +441,85 @@ export function AboutSection() {
           </div>
         </div>
 
-        {/* Tech Stack Section - pinned on desktop before releasing to next section */}
-        <div className="relative mt-24 md:min-h-[125vh] lg:min-h-[135vh]">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="relative z-30 md:sticky md:top-24"
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <h3 className="text-2xl font-bold">Tech Stack</h3>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+        {/* Tech Stack Section */}
+        <motion.div
+          ref={techStackRef}
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-24 relative z-30"
+        >
+              <div className="flex items-center gap-4 mb-8">
+                <h3 className="text-2xl font-bold">Tech Stack</h3>
+                <div className="flex-1 h-px bg-border" />
+              </div>
 
-            <p className="text-sm text-muted-foreground mb-8">
-              Tools and technologies I use to ship reliable, high-quality
-              products.
-            </p>
+              <p className="text-sm text-muted-foreground mb-8">
+                Tools and technologies I use to ship reliable, high-quality
+                products.
+              </p>
 
-            <div className="flex flex-wrap gap-2 mb-8">
-              {techCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`px-4 py-2 text-sm rounded-full transition-all duration-300 ${
-                    activeCategory === category.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  {category.title}
-                </button>
-              ))}
-            </div>
+              <div className="flex flex-wrap gap-2 mb-8">
+                {techCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`px-4 py-2 text-sm rounded-full transition-all duration-300 ${
+                      activeCategory === category.id
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {category.title}
+                  </button>
+                ))}
+              </div>
 
-            <div className="min-h-[330px] relative z-30 pointer-events-auto">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeCategory}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
-                >
-                  {currentSkills.map((tech, index) => (
-                    <motion.div
-                      key={tech.name}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={isInView ? { opacity: 1, y: 0 } : {}}
-                      transition={{ duration: 0.35, delay: index * 0.03 }}
-                      whileHover={{ y: -6, scale: 1.03 }}
-                      className="group rounded-2xl border border-border/80 bg-card/80 p-4 min-h-[124px] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/45 hover:bg-gradient-to-br hover:from-card hover:to-primary/5 hover:shadow-[0_26px_50px_-24px_oklch(0.75_0.15_180)]"
-                    >
-                      <div className="w-12 h-12 rounded-xl border border-border/70 bg-background/60 flex items-center justify-center mb-3 transition-all duration-300 group-hover:border-primary/45 group-hover:bg-primary/10 group-hover:shadow-[0_0_0_6px_oklch(0.75_0.15_180_/_0.08)]">
-                        {tech.icon ? (
-                          <tech.icon
-                            className={`w-7 h-7 ${tech.iconClassName} transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5`}
-                          />
-                        ) : tech.imageSrc ? (
-                          <img
-                            src={tech.imageSrc}
-                            alt={`${tech.name} icon`}
-                            className="w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5"
-                          />
-                        ) : (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                            {tech.name.slice(0, 3)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] sm:text-xs uppercase tracking-[0.08em] font-semibold text-foreground/90 leading-tight transition-colors duration-300 group-hover:text-primary">
-                        {tech.name}
-                      </span>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
+              <div className="min-h-[330px] relative z-30 pointer-events-auto">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeCategory}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
+                  >
+                    {currentSkills.map((tech, index) => (
+                      <motion.div
+                        key={tech.name}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={isInView ? { opacity: 1, y: 0 } : {}}
+                        transition={{ duration: 0.35, delay: index * 0.03 }}
+                        whileHover={{ y: -6, scale: 1.03 }}
+                        className="group rounded-2xl border border-border/80 bg-card/80 p-4 min-h-[124px] flex flex-col items-center justify-center text-center transition-all duration-300 hover:border-primary/45 hover:bg-gradient-to-br hover:from-card hover:to-primary/5 hover:shadow-[0_26px_50px_-24px_oklch(0.75_0.15_180)]"
+                      >
+                        <div className="w-12 h-12 rounded-xl border border-border/70 bg-background/60 flex items-center justify-center mb-3 transition-all duration-300 group-hover:border-primary/45 group-hover:bg-primary/10 group-hover:shadow-[0_0_0_6px_oklch(0.75_0.15_180_/_0.08)]">
+                          {tech.icon ? (
+                            <tech.icon
+                              className={`w-7 h-7 ${tech.iconClassName} transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5`}
+                            />
+                          ) : tech.imageSrc ? (
+                            <img
+                              src={tech.imageSrc}
+                              alt={`${tech.name} icon`}
+                              className="w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-0.5"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                              {tech.name.slice(0, 3)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] sm:text-xs uppercase tracking-[0.08em] font-semibold text-foreground/90 leading-tight transition-colors duration-300 group-hover:text-primary">
+                          {tech.name}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+        </motion.div>
       </motion.div>
     </section>
   );
