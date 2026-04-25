@@ -11,8 +11,12 @@ const footerLinks = [
 ];
 
 const socialLinks = [
-  { icon: Github, href: "https://github.com", label: "GitHub" },
-  { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn" },
+  { icon: Github, href: "https://github.com/Marbennn", label: "GitHub" },
+  {
+    icon: Linkedin,
+    href: "https://www.linkedin.com/in/marecepcion",
+    label: "LinkedIn",
+  },
   { icon: Mail, href: "mailto:maar.recepcion.up@phinmaed.com", label: "Email" },
 ];
 

@@ -98,7 +98,7 @@ export function Navigation() {
           {/* Social Links & Theme Toggle - Desktop */}
           <div className="hidden md:flex items-center gap-4">
             <motion.a
-              href="https://github.com"
+              href="https://github.com/Marbennn"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-colors"
@@ -109,7 +109,7 @@ export function Navigation() {
               <Github size={18} />
             </motion.a>
             <motion.a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/marecepcion"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-colors"
@@ -208,7 +208,7 @@ export function Navigation() {
 
               <div className="mt-12 flex gap-6">
                 <a
-                  href="https://github.com"
+                  href="https://github.com/Marbennn"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary transition-colors"
@@ -217,7 +217,7 @@ export function Navigation() {
                   <Github size={24} />
                 </a>
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/in/marecepcion"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary transition-colors"
